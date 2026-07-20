@@ -53,6 +53,17 @@ jobs:
           SEMGREP_VERSION: "latest"
         with:
           config: ./semgrep-rules
+           generateSarif: "1"
+           
+      - name: Save Semgrep Results
+        if: always()
+        run: |
+          if [ -f semgrep.sarif ]; then
+            echo "Semgrep report found"
+            cp semgrep.sarif semgrep-results.sarif
+          else
+            echo "No Semgrep report found"
+          fi
 
           
 
@@ -184,21 +195,21 @@ jobs:
           # SEMGREP CHECK
           # -------------------------
 
-          if [ -f semgrep-report.json ]; then
-
-            FINDINGS=$(cat semgrep-report.json | grep -o '"check_id"' | wc -l)
-
+             # SEMGREP CHECK
+          if [ -f semgrep-results.sarif ]; then
+         
+            FINDINGS=$(jq '.runs[0].results | length' semgrep-results.sarif)
+         
             if [ "$FINDINGS" -gt 0 ]; then
-
-              echo "❌ Semgrep detected vulnerabilities"
+              echo "❌ Semgrep vulnerabilities detected"
+              echo "Findings: $FINDINGS"
               FAILED=true
-
             else
-
               echo "✅ Semgrep clean"
-
             fi
-
+         
+          else
+            echo "⚠️ Semgrep report missing"
           fi
 
 
