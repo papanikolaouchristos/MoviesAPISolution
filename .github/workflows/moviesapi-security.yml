@@ -46,18 +46,15 @@ jobs:
       # SEMGREP SAST
       # -----------------------------
 
-      - name: Run Semgrep
+      -  - name: Run Semgrep
         continue-on-error: true
-        run: |
-          semgrep \
-          --config ./semgrep-rules \
-          --json \
-          --output semgrep-report.json \
-          .
-         
-          semgrep \
-          --config ./semgrep-rules \
-          .
+        uses: semgrep/semgrep-action@v1
+        env:
+          SEMGREP_VERSION: "latest"
+        with:
+          config: ./semgrep-rules
+
+          
 
 
       # -----------------------------
