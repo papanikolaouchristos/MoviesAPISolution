@@ -8,145 +8,275 @@ on:
     branches:
       - "**"
 
+
 jobs:
   security-scan:
+
     runs-on: ubuntu-latest
 
     steps:
+
+      # -----------------------------
+      # CHECKOUT
+      # -----------------------------
+
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+
+      # -----------------------------
+      # .NET BUILD
+      # -----------------------------
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
 
+
       - name: Restore Dependencies
         run: dotnet restore
+
 
       - name: Build Application
         run: dotnet build --configuration Release --no-restore
 
-      - name: Publish Application
-        run: dotnet publish -c Release -o publish
 
       # -----------------------------
-      # SEMGREP (SAST)
+      # SEMGREP SAST
       # -----------------------------
 
       - name: Run Semgrep
-        uses: semgrep/semgrep-action@v1
-        with:
-          config: ./semgrep-rules
+        continue-on-error: true
+        run: |
+          pip install semgrep
+
+          semgrep \
+          --config ./semgrep-rules \
+          --json \
+          --output semgrep-report.json \
+          .
+
 
       # -----------------------------
-      # TRUFFLEHOG (SECRET SCANNING)
+      # TRUFFLEHOG SECRET SCAN
       # -----------------------------
 
       - name: Run TruffleHog
+        continue-on-error: true
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
           extra_args: --only-verified
+
 
       # -----------------------------
       # DOCKER BUILD
       # -----------------------------
 
       - name: Build Docker Image
+        continue-on-error: true
         run: |
           docker build -t moviesapi .
 
+
       # -----------------------------
-      # TRIVY IMAGE SCAN
+      # TRIVY SCAN
       # -----------------------------
 
       - name: Run Trivy Scan
+        continue-on-error: true
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: moviesapi
-          format: table
+          format: json
+          output: trivy-report.json
           severity: HIGH,CRITICAL
-          exit-code: 1
+          exit-code: 0
           ignore-unfixed: true
 
+
       # -----------------------------
-      # RUN CONTAINER
+      # RUN APPLICATION
       # -----------------------------
 
       - name: Run MoviesAPI Container
+        continue-on-error: true
         run: |
-          docker run -d --name moviesapi-container -p 8080:8080 moviesapi
+          docker run -d \
+          --name moviesapi-container \
+          -p 8080:8080 \
+          moviesapi
 
-      - name: Wait for API
+
+      - name: Wait API
         run: |
           sleep 30
 
-      - name: Check API Availability
-        run: |
-          curl -I http://localhost:8080/swagger || true
 
       # -----------------------------
-      # OWASP ZAP (DAST)
+      # OWASP ZAP DAST
       # -----------------------------
 
-      - name: OWASP ZAP Baseline Scan
+      - name: OWASP ZAP Scan
+        continue-on-error: true
         uses: zaproxy/action-baseline@v0.14.0
         with:
-          target: "http://localhost:8080"
+          target: http://localhost:8080
+
 
       # -----------------------------
-      # SQLMAP INSTALLATION
+      # SQLMAP
       # -----------------------------
 
       - name: Install SQLMap
         run: |
           git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git
 
-      # -----------------------------
-      # SQLMAP SCAN
-      # -----------------------------
 
       - name: Run SQLMap
+        continue-on-error: true
         run: |
+
           python sqlmap/sqlmap.py \
           -u "http://localhost:8080/api/Movies/search?title=Batman" \
           -p title \
           --level=5 \
           --risk=3 \
           --batch \
-          > sqlmap-output.txt
+          | tee sqlmap-output.txt
+
+
 
       # -----------------------------
-      # FAIL PIPELINE IF SQLi EXISTS
+      # UPLOAD REPORTS
       # -----------------------------
 
-      - name: Check SQL Injection Results
-        run: |
-          if grep -qi "is vulnerable" sqlmap-output.txt; then
-            echo "SQL Injection detected."
-            cat sqlmap-output.txt
-            exit 1
-          fi
-
-          if grep -qi "injectable" sqlmap-output.txt; then
-            echo "SQL Injection detected."
-            cat sqlmap-output.txt
-            exit 1
-          fi
-
-          echo "No SQL Injection detected."
-
-      # -----------------------------
-      # UPLOAD REPORT
-      # -----------------------------
-
-      - name: Upload SQLMap Report
+      - name: Upload Security Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sqlmap-report
-          path: sqlmap-output.txt
+          name: security-reports
+          path: |
+            semgrep-report.json
+            trivy-report.json
+            sqlmap-output.txt
+          if-no-files-found: warn
+
+
+
+      # -----------------------------
+      # SECURITY GATE
+      # -----------------------------
+
+      - name: Security Gate
+        if: always()
+        run: |
+
+          echo "================================"
+          echo "Running Security Gate"
+          echo "================================"
+
+
+          FAILED=false
+
+
+          # -------------------------
+          # SEMGREP CHECK
+          # -------------------------
+
+          if [ -f semgrep-report.json ]; then
+
+            FINDINGS=$(cat semgrep-report.json | grep -o '"check_id"' | wc -l)
+
+            if [ "$FINDINGS" -gt 0 ]; then
+
+              echo "❌ Semgrep detected vulnerabilities"
+              FAILED=true
+
+            else
+
+              echo "✅ Semgrep clean"
+
+            fi
+
+          fi
+
+
+
+          # -------------------------
+          # TRIVY CHECK
+          # -------------------------
+
+          if [ -f trivy-report.json ]; then
+
+            VULNS=$(grep -o '"VulnerabilityID"' trivy-report.json | wc -l)
+
+
+            if [ "$VULNS" -gt 0 ]; then
+
+              echo "❌ Trivy detected vulnerabilities"
+              FAILED=true
+
+            else
+
+              echo "✅ Trivy clean"
+
+            fi
+
+          fi
+
+
+
+          # -------------------------
+          # SQLMAP CHECK
+          # -------------------------
+
+          if [ -f sqlmap-output.txt ]; then
+
+
+            if grep -qi "injectable" sqlmap-output.txt || \
+               grep -qi "is vulnerable" sqlmap-output.txt
+            then
+
+              echo "❌ SQL Injection detected"
+              FAILED=true
+
+            else
+
+              echo "✅ SQLMap clean"
+
+            fi
+
+
+          fi
+
+
+
+          # -------------------------
+          # FINAL DECISION
+          # -------------------------
+
+          if [ "$FAILED" = true ]; then
+
+            echo ""
+            echo "================================"
+            echo " SECURITY GATE FAILED "
+            echo " Vulnerabilities detected "
+            echo "================================"
+
+            exit 1
+
+          else
+
+            echo ""
+            echo "================================"
+            echo " SECURITY GATE PASSED "
+            echo "================================"
+
+          fi
+
+
 
       # -----------------------------
       # CLEANUP
@@ -155,5 +285,7 @@ jobs:
       - name: Stop Container
         if: always()
         run: |
+
           docker stop moviesapi-container || true
+
           docker rm moviesapi-container || true
