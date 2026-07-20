@@ -1,0 +1,8 @@
+rules:
+  - id: csharp-sql-injection-fromsqlraw
+    languages:
+      - csharp
+    severity: ERROR
+    message: Possible SQL Injection using FromSqlRaw
+    pattern: |
+      $X.FromSqlRaw($Y)

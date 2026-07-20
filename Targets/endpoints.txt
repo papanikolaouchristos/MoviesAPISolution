@@ -1,0 +1,11 @@
+http://localhost:8080/swagger
+
+http://localhost:8080/api/users
+
+http://localhost:8080/api/movies
+
+http://localhost:8080/api/movies/1
+
+http://localhost:8080/api/users/1
+
+http://localhost:8080/api/Movies/search?title=Batman

@@ -1,0 +1,22 @@
+﻿# Visual Studio
+.vs/
+
+# Build files
+bin/
+obj/
+
+# User files
+*.user
+*.suo
+
+# Logs
+*.log
+
+# Test reports
+Reports/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+*.sqlite

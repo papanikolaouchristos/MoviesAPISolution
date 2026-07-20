@@ -1,0 +1,13 @@
+﻿services:
+
+  moviesapi:
+    build: .
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      - ./wwwroot/uploads:/app/wwwroot/uploads
+      - ./movies.db:/app/movies.db
+
+    restart: always
