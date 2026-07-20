@@ -46,7 +46,7 @@ jobs:
       # SEMGREP SAST
       # -----------------------------
 
-      -  - name: Run Semgrep
+      - name: Run Semgrep
         continue-on-error: true
         uses: semgrep/semgrep-action@v1
         env:
