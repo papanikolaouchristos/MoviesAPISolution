@@ -9,10 +9,9 @@ branches:
 - "**"
 
 jobs:
-security-scan:
-runs-on: ubuntu-latest
+  security-scan:
+   runs-on: ubuntu-latest
 
-```
 steps:
   - name: Checkout Repository
     uses: actions/checkout@v4
