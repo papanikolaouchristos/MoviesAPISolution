@@ -65,25 +65,46 @@ jobs:
             echo "No Semgrep report found"
           fi
 
-          
+      - name: Create TruffleHog Ignore List
+        run: |
+          cat <<EOF > .trufflehog-exclude
+          .git
+          bin
+          obj
+          trufflehog-report.json
+          semgrep-results.sarif
+          trivy-report.json
+          EOF 
 
 
       # -----------------------------
       # TRUFFLEHOG SECRET SCAN
       # -----------------------------
 
-      - name: Run TruffleHog Full Scan
-        id: trufflehog
+      - name: Run TruffleHog Secret Scan
         continue-on-error: true
         run: |
+      
           docker run --rm \
             -v ${{ github.workspace }}:/tmp \
             -w /tmp \
             ghcr.io/trufflesecurity/trufflehog:latest \
             filesystem /tmp \
+            --exclude-paths=/tmp/.trufflehog-exclude \
             --json \
-            --fail > trufflehog-report.json
-
+            --no-update \
+            > trufflehog-report.json || true
+      
+      
+          if grep -q '"DetectorName"' trufflehog-report.json
+          then
+            echo "❌ Secrets detected by TruffleHog"
+            cat trufflehog-report.json
+            exit 1
+          else
+            echo "✅ TruffleHog clean"
+          fi
+      
 
       # -----------------------------
       # DOCKER BUILD
