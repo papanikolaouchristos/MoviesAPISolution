@@ -110,10 +110,10 @@ namespace MoviesAPI.Controllers
         [HttpGet("search")]
         public async Task<IActionResult> Search(string title)
         {
-            var query =
+            string query =
                 $"SELECT * FROM Movies WHERE Title LIKE '%{title}%'";
 
-            var movies = await _context.Movies
+            List<Movies> movies = await _context.Movies
                 .FromSqlRaw(query)
                 .ToListAsync();
 
