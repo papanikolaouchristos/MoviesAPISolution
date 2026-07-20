@@ -13,10 +13,9 @@ obj/
 *.log
 
 # Test reports
-Reports/
+
 
 # Database
-*.db
+
 *.db-shm
 *.db-wal
-*.sqlite
