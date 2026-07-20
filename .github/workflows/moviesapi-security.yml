@@ -159,4 +159,4 @@ steps:
     run: |
       docker stop moviesapi-container || true
       docker rm moviesapi-container || true
-```
+
