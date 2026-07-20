@@ -53,7 +53,7 @@ jobs:
           SEMGREP_VERSION: "latest"
         with:
           config: ./semgrep-rules
-           generateSarif: "1"
+          generateSarif: "1"
            
       - name: Save Semgrep Results
         if: always()
