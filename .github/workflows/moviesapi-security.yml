@@ -1,162 +1,162 @@
 name: MoviesAPI Security Pipeline
 
 on:
-push:
-branches:
-- "**"
-pull_request:
-branches:
-- "**"
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
 
 jobs:
   security-scan:
-   runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
-steps:
-  - name: Checkout Repository
-    uses: actions/checkout@v4
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-  - name: Setup .NET
-    uses: actions/setup-dotnet@v4
-    with:
-      dotnet-version: "8.0.x"
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
 
-  - name: Restore Dependencies
-    run: dotnet restore
+      - name: Restore Dependencies
+        run: dotnet restore
 
-  - name: Build Application
-    run: dotnet build --configuration Release --no-restore
+       - name: Build Application
+         run: dotnet build --configuration Release --no-restore
 
-  - name: Publish Application
-    run: dotnet publish -c Release -o publish
+       - name: Publish Application
+         run: dotnet publish -c Release -o publish
 
   # -----------------------------
   # SEMGREP (SAST)
   # -----------------------------
 
-  - name: Run Semgrep
-    uses: returntocorp/semgrep-action@v1
-    with:
-      config: ./semgrep-rules
+       - name: Run Semgrep
+         uses: returntocorp/semgrep-action@v1
+         with:
+          config: ./semgrep-rules
 
   # -----------------------------
   # TRUFFLEHOG (SECRET SCANNING)
   # -----------------------------
 
-  - name: Run TruffleHog
-    uses: trufflesecurity/trufflehog@main
-    with:
-      path: ./
-      base: HEAD~1
-      head: HEAD
-      extra_args: --only-verified
+       - name: Run TruffleHog
+         uses: trufflesecurity/trufflehog@main
+              with:
+                 path: ./
+                     base: HEAD~1
+                          head: HEAD
+                              extra_args: --only-verified
 
   # -----------------------------
   # DOCKER BUILD
   # -----------------------------
 
-  - name: Build Docker Image
-    run: |
-      docker build -t moviesapi .
+       - name: Build Docker Image
+         run: |
+             docker build -t moviesapi .
 
   # -----------------------------
   # TRIVY IMAGE SCAN
   # -----------------------------
 
-  - name: Run Trivy Scan
-    uses: aquasecurity/trivy-action@0.32.0
-    with:
-      image-ref: moviesapi
-      format: table
-      severity: HIGH,CRITICAL
-      exit-code: 1
-      ignore-unfixed: true
+        - name: Run Trivy Scan
+          uses: aquasecurity/trivy-action@0.32.0
+             with:
+              image-ref: moviesapi
+                 format: table
+                     severity: HIGH,CRITICAL
+                           exit-code: 1
+                              ignore-unfixed: true
 
   # -----------------------------
   # RUN CONTAINER
   # -----------------------------
 
-  - name: Run MoviesAPI Container
-    run: |
-      docker run -d --name moviesapi-container -p 8080:8080 moviesapi
+        - name: Run MoviesAPI Container
+          run: |
+             docker run -d --name moviesapi-container -p 8080:8080 moviesapi
 
-  - name: Wait for API
-    run: |
-      sleep 30
+       - name: Wait for API
+          run: |
+              sleep 30
 
-  - name: Check API Availability
-    run: |
-      curl -I http://localhost:8080/swagger || true
+       - name: Check API Availability
+          run: |
+             curl -I http://localhost:8080/swagger || true
 
   # -----------------------------
   # OWASP ZAP (DAST)
   # -----------------------------
 
-  - name: OWASP ZAP Baseline Scan
-    uses: zaproxy/action-baseline@v0.14.0
-    with:
-      target: "http://localhost:8080/swagger"
+      - name: OWASP ZAP Baseline Scan
+          uses: zaproxy/action-baseline@v0.14.0
+              with:
+                  target: "http://localhost:8080/swagger"
 
   # -----------------------------
   # SQLMAP INSTALLATION
   # -----------------------------
 
-  - name: Install SQLMap
-    run: |
-      git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git
+      - name: Install SQLMap
+           run: |
+              git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git
 
   # -----------------------------
   # SQLMAP SCAN
   # -----------------------------
 
-  - name: Run SQLMap
-    run: |
-      python sqlmap/sqlmap.py \
-      -u "http://localhost:8080/api/Movies/search?title=Batman" \
-      -p title \
-      --level=5 \
-      --risk=3 \
-      --batch \
-      > sqlmap-output.txt
+      - name: Run SQLMap
+           run: |
+              python sqlmap/sqlmap.py \
+              -u "http://localhost:8080/api/Movies/search?title=Batman" \
+              -p title \
+             --level=5 \
+             --risk=3 \
+             --batch \
+              > sqlmap-output.txt
 
   # -----------------------------
   # FAIL PIPELINE IF SQLi EXISTS
   # -----------------------------
 
-  - name: Check SQL Injection Results
-    run: |
-      if grep -qi "is vulnerable" sqlmap-output.txt; then
-        echo "SQL Injection detected."
-        cat sqlmap-output.txt
-        exit 1
-      fi
-
-      if grep -qi "injectable" sqlmap-output.txt; then
-        echo "SQL Injection detected."
-        cat sqlmap-output.txt
-        exit 1
-      fi
-
-      echo "No SQL Injection detected."
+     - name: Check SQL Injection Results
+          run: |
+              if grep -qi "is vulnerable" sqlmap-output.txt; then
+                echo "SQL Injection detected."
+                cat sqlmap-output.txt
+                exit 1
+              fi
+              
+              if grep -qi "injectable" sqlmap-output.txt; then
+                echo "SQL Injection detected."
+                cat sqlmap-output.txt
+                exit 1
+              fi
+              
+              echo "No SQL Injection detected."
 
   # -----------------------------
   # UPLOAD REPORT
   # -----------------------------
 
-  - name: Upload SQLMap Report
-    if: always()
-    uses: actions/upload-artifact@v4
-    with:
-      name: sqlmap-report
-      path: sqlmap-output.txt
+      - name: Upload SQLMap Report
+           if: always()
+              uses: actions/upload-artifact@v4
+                 with:
+                     name: sqlmap-report
+                     path: sqlmap-output.txt
 
   # -----------------------------
   # CLEANUP
   # -----------------------------
 
-  - name: Stop Container
-    if: always()
-    run: |
-      docker stop moviesapi-container || true
-      docker rm moviesapi-container || true
+      - name: Stop Container
+           if: always()
+              run: |
+                  docker stop moviesapi-container || true
+                  docker rm moviesapi-container || true
 
