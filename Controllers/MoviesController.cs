@@ -112,7 +112,7 @@ namespace MoviesAPI.Controllers
         {
             string query =
                 $"SELECT * FROM Movies WHERE Title LIKE '%{title}%'";
-
+            int x = 5;
             List<Movies> movies = await _context.Movies
                 .FromSqlRaw(query)
                 .ToListAsync();
