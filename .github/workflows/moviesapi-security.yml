@@ -72,12 +72,15 @@ jobs:
       # TRUFFLEHOG SECRET SCAN
       # -----------------------------
 
-      - name: Run TruffleHog
+      - name: Run TruffleHog Full Scan
         continue-on-error: true
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          extra_args: --no-update
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/tmp \
+            -w /tmp \
+            ghcr.io/trufflesecurity/trufflehog:latest \
+            filesystem /tmp \
+            --fail
 
 
       # -----------------------------
