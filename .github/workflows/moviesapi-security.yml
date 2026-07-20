@@ -66,7 +66,7 @@ jobs:
 
       - name: Run TruffleHog
         continue-on-error: true
-        uses: trufflesecurity/trufflehog@master
+        uses: trufflesecurity/trufflehog@main
         with:
           path: ./
           extra_args: --only-verified
