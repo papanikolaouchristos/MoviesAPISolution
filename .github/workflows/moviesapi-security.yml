@@ -73,6 +73,7 @@ jobs:
       # -----------------------------
 
       - name: Run TruffleHog Full Scan
+        id: trufflehog
         continue-on-error: true
         run: |
           docker run --rm \
@@ -80,7 +81,8 @@ jobs:
             -w /tmp \
             ghcr.io/trufflesecurity/trufflehog:latest \
             filesystem /tmp \
-            --fail
+            --json \
+            --fail > trufflehog-report.json
 
 
       # -----------------------------
@@ -174,6 +176,7 @@ jobs:
             semgrep-report.json
             trivy-report.json
             sqlmap-output.txt
+            trufflehog-report.json
           if-no-files-found: warn
 
 
@@ -216,6 +219,32 @@ jobs:
           fi
 
 
+          # -------------------------
+          # TRUFFLEHOG CHECK
+          # -------------------------
+
+          if [ -f trufflehog-report.json ]; then
+
+            SECRETS=$(wc -l < trufflehog-report.json)
+
+            if [ "$SECRETS" -gt 0 ]; then
+
+              echo "❌ Secrets detected by TruffleHog"
+              cat trufflehog-report.json
+              FAILED=true
+
+            else
+
+              echo "✅ TruffleHog clean"
+
+            fi
+
+          else
+
+            echo "⚠️ TruffleHog report missing"
+
+          fi
+         
 
           # -------------------------
           # TRIVY CHECK
