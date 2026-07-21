@@ -1,10 +1,11 @@
-Write-Host ""
 Write-Host "Installing Git Hooks..."
 
-git config --local core.hooksPath .githooks
 
-Write-Host ""
-Write-Host "Git hooks installed successfully."
-Write-Host ""
+git config core.hooksPath .githooks
 
-git config --get core.hooksPath
+
+Write-Host "Git hooks path configured:"
+git config core.hooksPath
+
+
+Write-Host "Hooks installed successfully"

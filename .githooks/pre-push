@@ -1,45 +1,5 @@
-#!/bin/bash
+#!/bin/sh
 
-echo "Running security checks before push..."
+powershell.exe -ExecutionPolicy Bypass -File "$(dirname "$0")/pre-push.ps1"
 
-mkdir -p logs
-
-REPO_PATH=$(git rev-parse --show-toplevel)
-
-echo "Repository path: $REPO_PATH"
-
-
-echo "Running TruffleHog..."
-
-
-docker run --rm \
-  -v "$(git rev-parse --show-toplevel | sed 's|/|\\\\|g' | sed 's|^|/|')" :/repo \
-  ghcr.io/trufflesecurity/trufflehog:latest \
-  filesystem /repo \
-  --fail > logs/trufflehog.log 2>&1
-
-
-if [ $? -ne 0 ]; then
-    echo "Secrets detected."
-    echo "See logs/trufflehog.log"
-    exit 1
-fi
-
-
-echo "Running Semgrep..."
-
-
-semgrep \
-  --config ./semgrep-rules \
-  --error > logs/semgrep.log 2>&1
-
-
-if [ $? -ne 0 ]; then
-    echo "Security issues detected."
-    echo "See logs/semgrep.log"
-    exit 1
-fi
-
-
-echo "Security checks passed"
-exit 0
+exit $?
