@@ -298,22 +298,22 @@ jobs:
           if [ -f sqlmap-output.txt ]; then
 
         
-          if grep -qi "is vulnerable" sqlmap-output.txt || \
-             grep -qi "parameter.*is injectable" sqlmap-output.txt || \
-             grep -qi "sql injection vulnerability" sqlmap-output.txt
-          then
-        
-              echo "❌ SQL Injection detected"
-              FAILED=true
-        
-          else
-        
-              echo "✅ SQLMap clean"
-        
+            if grep -qi "is vulnerable" sqlmap-output.txt || \
+               grep -qi "parameter.*is injectable" sqlmap-output.txt || \
+               grep -qi "sql injection vulnerability" sqlmap-output.txt
+            then
+            
+                echo "❌ SQL Injection detected"
+                FAILED=true
+            
+            else
+            
+                echo "✅ SQLMap clean"
+            
+            fi
+
+
           fi
-
-
-fi
 
 
 
