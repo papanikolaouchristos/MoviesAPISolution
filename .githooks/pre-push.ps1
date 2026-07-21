@@ -1,3 +1,8 @@
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
+Write-Host "Running security checks before push..."
+
 Write-Host "Running security checks before push..."
 
 New-Item -ItemType Directory -Force logs | Out-Null
