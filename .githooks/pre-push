@@ -12,8 +12,7 @@ echo "Repository path: $REPO_PATH"
 echo "Running TruffleHog..."
 
 docker run --rm \
-  -v "$REPO_PATH:/tmp" \
-  -w /tmp \
+  -v "$(pwd -W):/tmp" \
   ghcr.io/trufflesecurity/trufflehog:latest \
   filesystem /tmp \
   --fail > logs/trufflehog.log 2>&1
@@ -27,6 +26,7 @@ fi
 
 
 echo "Running Semgrep..."
+
 
 semgrep \
   --config ./semgrep-rules \
