@@ -1,0 +1,50 @@
+#!/bin/sh
+
+echo "================================"
+echo "Running Security Checks"
+echo "================================"
+
+
+echo ""
+echo "Running TruffleHog..."
+
+
+docker run --rm \
+-v "$PWD":/tmp \
+-w /tmp \
+ghcr.io/trufflesecurity/trufflehog:latest \
+filesystem /tmp \
+--fail
+
+
+if [ $? -ne 0 ]
+then
+    echo ""
+    echo "Secrets detected. Push blocked."
+    exit 1
+fi
+
+
+echo ""
+echo "Running Semgrep..."
+
+
+semgrep \
+--config ./semgrep-rules \
+--error
+
+
+if [ $? -ne 0 ]
+then
+    echo ""
+    echo "Security issues detected. Push blocked."
+    exit 1
+fi
+
+
+echo ""
+echo "================================"
+echo "All security checks passed."
+echo "================================"
+
+exit 0
