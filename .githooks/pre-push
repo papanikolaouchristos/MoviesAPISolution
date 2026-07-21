@@ -1,50 +1,34 @@
-#!/bin/sh
+#!/bin/bash
 
-echo "================================"
-echo "Running Security Checks"
-echo "================================"
+mkdir -p logs
 
-
-echo ""
 echo "Running TruffleHog..."
 
-
 docker run --rm \
--v "$PWD":/tmp \
+-v $(pwd):/tmp \
 -w /tmp \
 ghcr.io/trufflesecurity/trufflehog:latest \
 filesystem /tmp \
---fail
+--fail > logs/trufflehog.log 2>&1
 
-
-if [ $? -ne 0 ]
-then
-    echo ""
-    echo "Secrets detected. Push blocked."
+if [ $? -ne 0 ]; then
+    echo "Secrets detected."
+    echo "See logs/trufflehog.log"
     exit 1
 fi
 
 
-echo ""
 echo "Running Semgrep..."
-
 
 semgrep \
 --config ./semgrep-rules \
---error
+--error > logs/semgrep.log 2>&1
 
-
-if [ $? -ne 0 ]
-then
-    echo ""
-    echo "Security issues detected. Push blocked."
+if [ $? -ne 0 ]; then
+    echo "Security issues detected."
+    echo "See logs/semgrep.log"
     exit 1
 fi
 
-
-echo ""
-echo "================================"
-echo "All security checks passed."
-echo "================================"
-
+echo "Security checks passed."
 exit 0
