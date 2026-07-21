@@ -4,12 +4,15 @@ mkdir -p logs
 
 echo "Running TruffleHog..."
 
+PROJECT_PATH=$(pwd)
+
 docker run --rm \
--v $(pwd):/tmp \
+-v "${PROJECT_PATH}:/tmp" \
 -w /tmp \
 ghcr.io/trufflesecurity/trufflehog:latest \
 filesystem /tmp \
 --fail > logs/trufflehog.log 2>&1
+
 
 if [ $? -ne 0 ]; then
     echo "Secrets detected."
