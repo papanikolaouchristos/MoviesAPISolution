@@ -11,10 +11,11 @@ echo "Repository path: $REPO_PATH"
 
 echo "Running TruffleHog..."
 
+
 docker run --rm \
-  -v "$(pwd -W):/tmp" \
+  -v "$(git rev-parse --show-toplevel | sed 's|/|\\\\|g' | sed 's|^|/|')" :/repo \
   ghcr.io/trufflesecurity/trufflehog:latest \
-  filesystem /tmp \
+  filesystem /repo \
   --fail > logs/trufflehog.log 2>&1
 
 
