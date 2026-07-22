@@ -16,7 +16,7 @@ pipeline {
                 docker run --rm \
                 -v $(pwd):/src \
                 semgrep/semgrep \
-                semgrep --config auto /src
+                semgrep scan --config auto --no-git-ignore /src
                 '''
             }
         }
@@ -25,11 +25,9 @@ pipeline {
             steps {
                 sh '''
                 docker run --rm \
-                  -v $PWD:/repo \
-                  trufflesecurity/trufflehog:latest \
-                  filesystem /repo \
-                  --no-update \
-                  > trufflehog-report.txt || true
+                -v $(pwd):/repo \
+                trufflesecurity/trufflehog:latest \
+                filesystem /repo --directory --no-update
                 '''
             }
         }
@@ -47,7 +45,7 @@ pipeline {
                   -v /var/run/docker.sock:/var/run/docker.sock \
                   aquasec/trivy image \
                   moviesapi-sec \
-                  > trivy-report.txt || true
+                  > trivy-report.txt 
                 '''
             }
         }
@@ -67,9 +65,9 @@ pipeline {
                 sh '''
                 docker run --rm \
                 --network moviesapi-security-pipeline_default \
-                sqlmapproject/sqlmap \
+                secunit/sqlmap \
                 -u "http://moviesapi:8080/api/movies/search?title=test" \
-                --batch || true
+                --batch
                 '''
             }
         }
@@ -77,13 +75,15 @@ pipeline {
         stage('OWASP ZAP') {
             steps {
                 sh '''
+                chmod -R 777 .
+        
                 docker run --rm \
                 --network moviesapi-security-pipeline_default \
                 -v $(pwd):/zap/wrk \
                 ghcr.io/zaproxy/zaproxy:stable \
                 zap-baseline.py \
                 -t http://moviesapi:8080 \
-                -r zap-report.html || true
+                -r zap-report.html
                 '''
             }
         }
