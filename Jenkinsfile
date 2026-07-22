@@ -13,9 +13,10 @@ pipeline {
         stage('Semgrep') {
             steps {
                 sh '''
-                semgrep \
-                  --config semgrep-rules \
-                  . > semgrep-report.txt || true
+                docker run --rm \
+                -v $(pwd):/src \
+                semgrep/semgrep \
+                semgrep --config auto /src
                 '''
             }
         }
@@ -64,10 +65,11 @@ pipeline {
         stage('SQLMap') {
             steps {
                 sh '''
-                python3 sqlmap/sqlmap.py \
-                  -u "http://moviesapi:8080/api/movies/search?title=test" \
-                  --batch \
-                  > sqlmap-report.txt || true
+                docker run --rm \
+                --network moviesapi-security-pipeline_default \
+                sqlmapproject/sqlmap \
+                -u "http://moviesapi:8080/api/movies/search?title=test" \
+                --batch || true
                 '''
             }
         }
@@ -76,12 +78,12 @@ pipeline {
             steps {
                 sh '''
                 docker run --rm \
-                  --network moviesapi_default \
-                  -v $PWD:/zap/wrk \
-                  ghcr.io/zaproxy/zaproxy:stable \
-                  zap-baseline.py \
-                  -t http://moviesapi:8080 \
-                  -r zap-report.html || true
+                --network moviesapi-security-pipeline_default \
+                -v $(pwd):/zap/wrk \
+                ghcr.io/zaproxy/zaproxy:stable \
+                zap-baseline.py \
+                -t http://moviesapi:8080 \
+                -r zap-report.html || true
                 '''
             }
         }
