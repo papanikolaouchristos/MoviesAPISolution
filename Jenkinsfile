@@ -25,9 +25,8 @@ pipeline {
             steps {
                 sh '''
                 docker run --rm \
-                -v $(pwd):/repo \
-                trufflesecurity/trufflehog:latest \
-                filesystem /repo --directory --no-update
+                -v /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline:/repo \
+                trufflesecurity/trufflehog:latest filesystem /repo --no-update
                 '''
             }
         }
