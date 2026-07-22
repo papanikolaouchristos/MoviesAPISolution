@@ -12,10 +12,10 @@ obj/
 # Logs
 *.log
 
-# Test reports
-
+wwwroot/uploads
+.git
 
 # Database
-
+movies.db
 *.db-shm
 *.db-wal

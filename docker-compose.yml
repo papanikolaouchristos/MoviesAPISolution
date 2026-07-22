@@ -6,7 +6,7 @@
       - "5000:8080"
 
     volumes:
-      - ./wwwroot/uploads:/app/wwwroot/uploads
-      - ./movies.db:/app/movies.db
+      - ./wwwroot/uploads:/app/wwwroot/uploads      
+      - ./movies.db:/app/Data/movies.db
 
     restart: always
