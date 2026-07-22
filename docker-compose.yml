@@ -1,13 +1,12 @@
 ﻿version: '3.8'
 
 services:
-
+ 
   moviesapi:
     build: .
-    container_name: moviesapi
-
     ports:
-      - "8080:8080"
+      - "5000:8080"
+         
 
     volumes:
       - ./wwwroot/uploads:/app/wwwroot/uploads

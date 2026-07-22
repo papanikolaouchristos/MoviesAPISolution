@@ -54,9 +54,9 @@ pipeline {
         stage('Run Application') {
             steps {
                 sh '''
-                docker compose down || true
-                docker compose up -d
-                sleep 20
+                    docker rm -f moviesapi || true
+                    docker compose down --remove-orphans
+                    docker compose up -d
                 '''
             }
         }
