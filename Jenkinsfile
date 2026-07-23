@@ -105,20 +105,37 @@ pipeline {
         stage('SQLMap') {
             steps {
                 sh '''
-                docker run --rm \
-                  --network moviesapi-security-pipeline_default \
-                  --volumes-from jenkins \
-                  parrotsec/sqlmap \
-                  -m /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline/Targets/endpoints-jenkins.txt \
-				  --dbms=SQLite \
-                  --level=5 \
-                  --risk=3 \
-				  --technique=BEUSTQ \
-                  --union-cols=1-20 \
-                  --flush-session \
-                  --batch > sqlmap-report.txt 2>&1
+                    rm -rf sqlmap-src
         
-                cat sqlmap-report.txt
+                    git clone --depth 1 \
+                        https://github.com/sqlmapproject/sqlmap.git \
+                        sqlmap-src
+        
+                    set +e
+        
+                    docker run --rm \
+                        --network moviesapi-security-pipeline_default \
+                        -v "$(pwd)/sqlmap-src:/sqlmap:ro" \
+                        python:3.12-slim \
+                        python /sqlmap/sqlmap.py \
+                        -u "http://moviesapi:8080/api/movies/search?title=King" \
+                        -p title \
+                        --dbms=SQLite \
+                        --level=5 \
+                        --risk=3 \
+                        --technique=BEUSTQ \
+                        --union-cols=1-20 \
+                        --string="King Kong" \
+                        --flush-session \
+                        --batch \
+                        > sqlmap-report.txt 2>&1
+        
+                    SQLMAP_EXIT=$?
+        
+                    set -e
+        
+                    cat sqlmap-report.txt
+                    echo "SQLMap exit code: $SQLMAP_EXIT"
                 '''
             }
         }
