@@ -112,9 +112,9 @@ namespace MoviesAPI.Controllers
         {
             string query =
                 $"SELECT * FROM Movies WHERE Title LIKE '%{title}%'";
-              //
+             
             List<Movies> movies = await _context.Movies
-                //.FromSqlRaw(query)
+                .FromSqlRaw(query)
                 .ToListAsync();
 
             return Ok(movies);
