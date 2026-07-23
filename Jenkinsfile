@@ -14,9 +14,9 @@ pipeline {
             steps {
                 sh '''
                 docker run --rm \
-                -v $(pwd):/src \
+                -v "$PWD:/src" \
                 semgrep/semgrep \
-                semgrep scan --config auto --no-git-ignore /src
+                semgrep scan --config auto /src
                 '''
             }
         }
@@ -62,9 +62,8 @@ pipeline {
         stage('SQLMap') {
             steps {
                 sh '''
-                docker run --rm \
-                --network moviesapi-security-pipeline_default \
-                secunit/sqlmap \
+                docker run --rm --network moviesapi-security-pipeline_default \
+                sqlmapproject/sqlmap \
                 -u "http://moviesapi:8080/api/movies/search?title=test" \
                 --batch
                 '''
