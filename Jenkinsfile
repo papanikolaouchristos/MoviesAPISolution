@@ -52,9 +52,28 @@ pipeline {
         stage('Run Application') {
             steps {
                 sh '''
-                    docker rm -f moviesapi || true
-                    docker compose down --remove-orphans
+                    docker compose down --remove-orphans || true
                     docker compose up -d
+        
+                    echo "Waiting for MoviesAPI..."
+        
+                    for i in $(seq 1 30); do
+                        if docker run --rm \
+                            --network moviesapi-security-pipeline_default \
+                            curlimages/curl:latest \
+                            -fsS http://moviesapi:8080/swagger/v1/swagger.json \
+                            > /dev/null
+                        then
+                            echo "MoviesAPI is ready"
+                            exit 0
+                        fi
+        
+                        sleep 2
+                    done
+        
+                    echo "MoviesAPI did not become ready"
+                    docker compose logs moviesapi
+                    exit 1
                 '''
             }
         }
@@ -62,11 +81,14 @@ pipeline {
         stage('SQLMap') {
             steps {
                 sh '''
-                docker run --rm \
-                --network moviesapi-security-pipeline_default \
-                parrotsec/sqlmap \
-                -u "http://moviesapi:8080/api/movies/search?title=test" \
-                --batch > sqlmap-report.txt 
+                    docker run --rm \
+                        --network moviesapi-security-pipeline_default \
+                        parrotsec/sqlmap \
+                        -u "http://moviesapi:8080/api/movies/search?title=test" \
+                        --batch \
+                        > sqlmap-report.txt 2>&1
+        
+                    cat sqlmap-report.txt
                 '''
             }
         }
@@ -74,26 +96,50 @@ pipeline {
         stage('OWASP ZAP') {
             steps {
                 sh '''
-                chmod -R 777 .
+                    rm -rf zap-reports
+                    mkdir -p zap-reports
+                    chmod 777 zap-reports
         
-                docker run --rm \
-                --network moviesapi-security-pipeline_default \
-                -v $(pwd):/zap/wrk \
-                ghcr.io/zaproxy/zaproxy:stable \
-                zap-baseline.py \
-                -t http://moviesapi:8080 \
-                -r zap-report.html
+                    set +e
+        
+                    docker run --rm \
+                        --user root \
+                        --network moviesapi-security-pipeline_default \
+                        -v "$(pwd)/zap-reports:/zap/wrk:rw" \
+                        ghcr.io/zaproxy/zaproxy:stable \
+                        zap-baseline.py \
+                        -t http://moviesapi:8080/swagger/index.html \
+                        -r zap-report.html
+        
+                    ZAP_EXIT=$?
+        
+                    set -e
+        
+                    if [ -f zap-reports/zap-report.html ]; then
+                        cp zap-reports/zap-report.html ./zap-report.html
+                    fi
+        
+                    if [ "$ZAP_EXIT" -eq 0 ]; then
+                        echo "OWASP ZAP completed successfully"
+                    elif [ "$ZAP_EXIT" -eq 2 ]; then
+                        echo "OWASP ZAP completed with warnings"
+                    elif [ "$ZAP_EXIT" -eq 1 ]; then
+                        echo "OWASP ZAP detected blocking findings"
+                        exit 1
+                    else
+                        echo "OWASP ZAP execution failed with exit code $ZAP_EXIT"
+                        exit "$ZAP_EXIT"
+                    fi
                 '''
             }
         }
     }
 
     post {
-
         always {
-
-            archiveArtifacts artifacts: '*.txt,*.html', fingerprint: true
-
+            archiveArtifacts artifacts: '*.txt,*.html,zap-reports/*.html',
+                             allowEmptyArchive: true,
+                             fingerprint: true
         }
     }
 }
