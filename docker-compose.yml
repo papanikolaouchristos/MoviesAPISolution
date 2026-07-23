@@ -7,6 +7,6 @@
 
     volumes:
       - ./wwwroot/uploads:/app/wwwroot/uploads      
-      - ./movies.db:/app/Data/movies.db
+      
 
     restart: always
