@@ -108,14 +108,26 @@ pipeline {
                     rm -rf sqlmap
                     git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git
         
+                    TARGETS_FILE="$WORKSPACE/Targets/endpoints-jenkins.txt"
+        
+                    if [ ! -s "$TARGETS_FILE" ]; then
+                        echo "❌ Το αρχείο SQLMap targets λείπει ή είναι άδειο"
+                        exit 1
+                    fi
+        
+                    echo "===== SQLMap targets ====="
+                    cat "$TARGETS_FILE"
+                    echo "=========================="
+        
                     set +e
         
                     script -q -e -c "python3 sqlmap/sqlmap.py \
-                        -u 'http://moviesapi:8080/api/Movies/search?title=Batman' \
+                        -m '$TARGETS_FILE' \
                         -p title \
                         --level=5 \
                         --risk=3 \
                         --batch \
+                        --flush-session \
                         --disable-coloring" /dev/null \
                         > sqlmap-report.txt 2>&1
         
