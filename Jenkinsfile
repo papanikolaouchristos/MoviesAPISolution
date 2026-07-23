@@ -46,7 +46,15 @@ pipeline {
 
         stage('Build Image') {
             steps {
-                sh 'docker build -t moviesapi-sec .'
+                sh '''
+                    docker pull mcr.microsoft.com/dotnet/sdk:8.0
+                    docker pull mcr.microsoft.com/dotnet/aspnet:8.0
+        
+                    docker build \
+                        --pull \
+                        --no-cache \
+                        -t moviesapi-sec .
+                '''
             }
         }
 
@@ -125,7 +133,7 @@ pipeline {
                         ghcr.io/zaproxy/zaproxy:stable \
                         zap-baseline.py \
                         -t http://moviesapi:8080/swagger/index.html \
-                        -r /zap/wrk/zap-report.html \
+                        -r zap-report.html
                         > zap-report.txt 2>&1
         
                     ZAP_EXIT=$?
