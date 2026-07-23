@@ -98,7 +98,7 @@ pipeline {
                   --network moviesapi-security-pipeline_default \
                   --volumes-from jenkins \
                   parrotsec/sqlmap \
-                  -m /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline/Targets/endpoints.txt \
+                  -m /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline/Targets/endpoints-jenkins.txt \
                   --batch > sqlmap-report.txt
         
                 cat sqlmap-report.txt
