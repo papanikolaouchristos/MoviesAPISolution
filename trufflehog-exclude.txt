@@ -1,5 +1,11 @@
 .git/
-logs/
 sqlmap/
+sqlmap-src/
 bin/
 obj/
+logs/
+trufflehog-report.txt
+sqlmap-report.txt
+semgrep-report.txt
+trivy-report.txt
+zap-reports/
