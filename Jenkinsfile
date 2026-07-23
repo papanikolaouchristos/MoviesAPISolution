@@ -13,10 +13,17 @@ pipeline {
         stage('Semgrep') {
             steps {
                 sh '''
-                docker run --rm \
-                -v "$PWD:/src" \
-                semgrep/semgrep \
-                semgrep scan --config auto /src --include="*.cs"
+                    docker run --rm \
+                        --volumes-from jenkins \
+                        semgrep/semgrep \
+                        semgrep scan \
+                        --config /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline/semgrep-rules \
+                        --no-git-ignore \
+                        --include="*.cs" \
+                        /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline \
+                        > semgrep-report.txt 2>&1
+        
+                    cat semgrep-report.txt
                 '''
             }
         }
@@ -24,9 +31,15 @@ pipeline {
         stage('TruffleHog') {
             steps {
                 sh '''
-                docker run --rm \
-                -v /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline:/repo \
-                trufflesecurity/trufflehog:latest filesystem /repo --no-update
+                    docker run --rm \
+                        --volumes-from jenkins \
+                        trufflesecurity/trufflehog:latest \
+                        filesystem \
+                        /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline \
+                        --no-update \
+                        > trufflehog-report.txt 2>&1
+        
+                    cat trufflehog-report.txt
                 '''
             }
         }
