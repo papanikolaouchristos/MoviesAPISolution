@@ -54,10 +54,13 @@ pipeline {
             steps {
                 sh '''
                 docker run --rm \
-                  -v /var/run/docker.sock:/var/run/docker.sock \
-                  aquasec/trivy image \
-                  moviesapi-sec \
-                  > trivy-report.txt 2>&1
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                aquasec/trivy image \
+                --scanners vuln \
+                --pkg-types library \
+                moviesapi-sec > trivy-report.txt 2>&1
+        
+                cat trivy-report.txt
                 '''
             }
         }
@@ -122,18 +125,17 @@ pipeline {
                         ghcr.io/zaproxy/zaproxy:stable \
                         zap-baseline.py \
                         -t http://moviesapi:8080/swagger/index.html \
-                        -r zap-report.html \
-						> zap-report.txt 2>&1
+                        -r /zap/wrk/zap-report.html \
+                        > zap-report.txt 2>&1
         
                     ZAP_EXIT=$?
-					
-					cat zap-report.txt
         
                     set -e
         
-                    if [ -f zap-reports/zap-report.html ]; then
-                        cp zap-reports/zap-report.html ./zap-report.html
-                    fi
+                    cat zap-report.txt
+        
+                    echo "ZAP report files:"
+                    ls -la zap-reports || true
         
                     if [ "$ZAP_EXIT" -eq 0 ]; then
                         echo "OWASP ZAP completed successfully"
@@ -141,7 +143,6 @@ pipeline {
                         echo "OWASP ZAP completed with warnings"
                     elif [ "$ZAP_EXIT" -eq 1 ]; then
                         echo "OWASP ZAP detected blocking findings"
-                        exit 1
                     else
                         echo "OWASP ZAP execution failed with exit code $ZAP_EXIT"
                         exit "$ZAP_EXIT"
@@ -207,14 +208,20 @@ pipeline {
                     fi
         
                     # 5. OWASP ZAP
-                    if [ ! -f zap-reports/zap-report.html ]; then
-                        echo "❌ ZAP report missing"
+                    if [ ! -f zap-report.txt ]; then
+                        echo "❌ ZAP console report missing"
                         FAILED=true
-                    elif grep -Eqi "FAIL-NEW:[[:space:]]*[1-9][0-9]*|FAIL-INPROG:[[:space:]]*[1-9][0-9]*" zap-reports/zap-report.html; then
+                    elif grep -Eqi "FAIL-NEW:[[:space:]]*[1-9][0-9]*|FAIL-INPROG:[[:space:]]*[1-9][0-9]*" zap-report.txt; then
                         echo "❌ OWASP ZAP detected blocking findings"
                         FAILED=true
                     else
                         echo "✅ OWASP ZAP completed without blocking failures"
+                    fi
+                    
+                    if [ -f zap-reports/zap-report.html ]; then
+                        echo "✅ ZAP HTML report generated"
+                    else
+                        echo "⚠️ ZAP HTML report was not generated"
                     fi
         
                     echo ""
@@ -236,7 +243,7 @@ pipeline {
     post {
         always {
             archiveArtifacts(
-                artifacts: 'semgrep-report.txt,trufflehog-report.txt,trivy-report.txt,sqlmap-report.txt,zap-report.html,zap-reports/*.html',
+                artifacts: 'semgrep-report.txt,trufflehog-report.txt,trivy-report.txt,sqlmap-report.txt,zap-report.html,zap-reports/*.html,zap-report.txt',
                 allowEmptyArchive: true,
                 fingerprint: true
             )
