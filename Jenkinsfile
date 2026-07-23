@@ -79,17 +79,23 @@ pipeline {
             steps {
                 sh '''
                     docker compose down --remove-orphans || true
-                    docker compose up -d
+        
+                    docker compose build \
+                        --pull \
+                        moviesapi
+        
+                    docker compose up \
+                        -d \
+                        --force-recreate \
+                        moviesapi
         
                     echo "Waiting for MoviesAPI..."
         
                     for i in $(seq 1 30); do
-                        if docker run --rm \
-                            --network moviesapi-security-pipeline_default \
-                            curlimages/curl:latest \
-                            -fsS http://moviesapi:8080/swagger/v1/swagger.json \
-                            > /dev/null
-                        then
+                        if curl -fsS \
+                            "http://moviesapi-security-pipeline-moviesapi-1:8080/swagger/v1/swagger.json" \
+                            > /dev/null; then
+        
                             echo "MoviesAPI is ready"
                             exit 0
                         fi
@@ -97,7 +103,7 @@ pipeline {
                         sleep 2
                     done
         
-                    echo "MoviesAPI did not become ready"
+                    echo "MoviesAPI failed to start"
                     docker compose logs moviesapi
                     exit 1
                 '''
