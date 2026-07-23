@@ -105,29 +105,18 @@ pipeline {
         stage('SQLMap') {
             steps {
                 sh '''
-                    rm -rf sqlmap-src
-                    git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git sqlmap-src
-        
-                    SQLMAP_PATH="$WORKSPACE/sqlmap-src/sqlmap.py"
-        
-                    test -f "$SQLMAP_PATH"
+                    rm -rf sqlmap
+                    git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git
         
                     set +e
         
-                    docker run --rm -t \
-                        --network moviesapi-security-pipeline_default \
-                        --volumes-from jenkins \
-                        python:3.12-slim \
-                        python "$SQLMAP_PATH" \
-                        -u "http://moviesapi:8080/api/movies/search?title=King" \
+                    script -q -e -c "python3 sqlmap/sqlmap.py \
+                        -u 'http://moviesapi:8080/api/Movies/search?title=Batman' \
                         -p title \
-                        --dbms=SQLite \
                         --level=5 \
                         --risk=3 \
-                        --technique=BEUSTQ \
-                        --union-cols=1-20 \
-                        --flush-session \
                         --batch \
+                        --disable-coloring" /dev/null \
                         > sqlmap-report.txt 2>&1
         
                     SQLMAP_EXIT=$?
