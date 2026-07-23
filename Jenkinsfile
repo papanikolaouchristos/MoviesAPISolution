@@ -110,6 +110,10 @@ pipeline {
                   --volumes-from jenkins \
                   parrotsec/sqlmap \
                   -m /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline/Targets/endpoints-jenkins.txt \
+				  --dbms=SQLite \
+                  --level=5 \
+                  --risk=3 \
+                  --flush-session \
                   --batch > sqlmap-report.txt 2>&1
         
                 cat sqlmap-report.txt
