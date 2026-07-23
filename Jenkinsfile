@@ -57,7 +57,7 @@ pipeline {
                   -v /var/run/docker.sock:/var/run/docker.sock \
                   aquasec/trivy image \
                   moviesapi-sec \
-                  > trivy-report.txt 
+                  > trivy-report.txt 2>&1
                 '''
             }
         }
@@ -99,7 +99,7 @@ pipeline {
                   --volumes-from jenkins \
                   parrotsec/sqlmap \
                   -m /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline/Targets/endpoints-jenkins.txt \
-                  --batch > sqlmap-report.txt
+                  --batch > sqlmap-report.txt 2>&1
         
                 cat sqlmap-report.txt
                 '''
@@ -122,9 +122,12 @@ pipeline {
                         ghcr.io/zaproxy/zaproxy:stable \
                         zap-baseline.py \
                         -t http://moviesapi:8080/swagger/index.html \
-                        -r zap-report.html
+                        -r zap-report.html \
+						> zap-report.txt 2>&1
         
                     ZAP_EXIT=$?
+					
+					cat zap-report.txt
         
                     set -e
         
@@ -146,13 +149,105 @@ pipeline {
                 '''
             }
         }
+		
+		stage('Security Gate') {
+            steps {
+                sh '''
+                    FAILED=false
+        
+                    echo "================================"
+                    echo "       SECURITY GATE"
+                    echo "================================"
+        
+                    # 1. Semgrep
+                    if [ ! -f semgrep-report.txt ]; then
+                        echo "❌ Semgrep report missing"
+                        FAILED=true
+                    elif grep -Eqi "Findings:[[:space:]]*[1-9][0-9]*|[1-9][0-9]* blocking" semgrep-report.txt; then
+                        echo "❌ Semgrep detected findings"
+                        FAILED=true
+                    else
+                        echo "✅ Semgrep clean"
+                    fi
+        
+                    # 2. TruffleHog
+                    if [ ! -f trufflehog-report.txt ]; then
+                        echo "❌ TruffleHog report missing"
+                        FAILED=true
+                    elif grep -Eqi '"verified_secrets":[[:space:]]*[1-9]|"unverified_secrets":[[:space:]]*[1-9]|Found verified result|Found unverified result' trufflehog-report.txt; then
+                        echo "❌ TruffleHog detected secrets"
+                        FAILED=true
+                    else
+                        echo "✅ TruffleHog clean"
+                    fi
+        
+                    # 3. SQLMap
+                    if [ ! -f sqlmap-report.txt ]; then
+                        echo "❌ SQLMap report missing"
+                        FAILED=true
+                    elif grep -Eqi "parameter.*is injectable|identified the following injection point|sqlmap identified.*injectable" sqlmap-report.txt; then
+                        echo "❌ SQL Injection detected"
+                        FAILED=true
+                    elif grep -Eqi "unable to connect|connection refused|host.*not known|no such host" sqlmap-report.txt; then
+                        echo "❌ SQLMap could not reach the application"
+                        FAILED=true
+                    else
+                        echo "✅ SQLMap clean"
+                    fi
+        
+                    # 4. Trivy
+                    if [ ! -f trivy-report.txt ]; then
+                        echo "❌ Trivy report missing"
+                        FAILED=true
+                    elif grep -Eqi "CRITICAL:[[:space:]]*[1-9][0-9]*" trivy-report.txt; then
+                        echo "❌ Trivy detected CRITICAL vulnerabilities"
+                        FAILED=true
+                    else
+                        echo "✅ Trivy: no blocking CRITICAL findings"
+                    fi
+        
+                    # 5. OWASP ZAP
+                    if [ ! -f zap-reports/zap-report.html ]; then
+                        echo "❌ ZAP report missing"
+                        FAILED=true
+                    elif grep -Eqi "FAIL-NEW:[[:space:]]*[1-9][0-9]*|FAIL-INPROG:[[:space:]]*[1-9][0-9]*" zap-reports/zap-report.html; then
+                        echo "❌ OWASP ZAP detected blocking findings"
+                        FAILED=true
+                    else
+                        echo "✅ OWASP ZAP completed without blocking failures"
+                    fi
+        
+                    echo ""
+                    echo "================================"
+        
+                    if [ "$FAILED" = true ]; then
+                        echo "       SECURITY GATE FAILED"
+                        echo "================================"
+                        exit 1
+                    fi
+        
+                    echo "       SECURITY GATE PASSED"
+                    echo "================================"
+                '''
+            }
+        }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: '*.txt,*.html,zap-reports/*.html',
-                             allowEmptyArchive: true,
-                             fingerprint: true
+            archiveArtifacts(
+                artifacts: 'semgrep-report.txt,trufflehog-report.txt,trivy-report.txt,sqlmap-report.txt,zap-report.html,zap-reports/*.html',
+                allowEmptyArchive: true,
+                fingerprint: true
+            )
+        }
+    
+        success {
+            echo 'DevSecOps pipeline completed successfully.'
+        }
+    
+        failure {
+            echo 'DevSecOps pipeline failed. Check the security reports.'
         }
     }
 }
