@@ -94,14 +94,14 @@ pipeline {
         stage('SQLMap') {
             steps {
                 sh '''
-                    docker run --rm \
-                        --network moviesapi-security-pipeline_default \
-                        parrotsec/sqlmap \
-                        -u "http://moviesapi:8080/api/movies/search?title=test" \
-                        --batch \
-                        > sqlmap-report.txt 2>&1
+                docker run --rm \
+                  --network moviesapi-security-pipeline_default \
+                  --volumes-from jenkins \
+                  parrotsec/sqlmap \
+                  -m /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline/Targets/endpoints.txt \
+                  --batch > sqlmap-report.txt
         
-                    cat sqlmap-report.txt
+                cat sqlmap-report.txt
                 '''
             }
         }
