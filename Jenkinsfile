@@ -111,13 +111,19 @@ pipeline {
                         https://github.com/sqlmapproject/sqlmap.git \
                         sqlmap-src
         
+                    SQLMAP_PATH="$WORKSPACE/sqlmap-src/sqlmap.py"
+        
+                    echo "SQLMap path: $SQLMAP_PATH"
+                    ls -la "$WORKSPACE/sqlmap-src"
+                    test -f "$SQLMAP_PATH"
+        
                     set +e
         
                     docker run --rm \
                         --network moviesapi-security-pipeline_default \
-                        -v "$(pwd)/sqlmap-src:/sqlmap:ro" \
+                        --volumes-from jenkins \
                         python:3.12-slim \
-                        python /sqlmap/sqlmap.py \
+                        python "$SQLMAP_PATH" \
                         -u "http://moviesapi:8080/api/movies/search?title=King" \
                         -p title \
                         --dbms=SQLite \
