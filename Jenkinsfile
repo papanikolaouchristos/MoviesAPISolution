@@ -109,38 +109,25 @@ pipeline {
                     git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git sqlmap-src
         
                     SQLMAP_PATH="$WORKSPACE/sqlmap-src/sqlmap.py"
-                    REQUEST_PATH="$WORKSPACE/Targets/sqlmap-request-jenkins.txt"
         
                     test -f "$SQLMAP_PATH"
         
-                    printf '%s\\r\\n' \
-                        'GET /api/movies/search?title=King* HTTP/1.1' \
-                        'Host: moviesapi:8080' \
-                        'Accept: application/json' \
-                        'Connection: close' \
-                        '' \
-                        > "$REQUEST_PATH"
-        
-                    echo "===== SQLMap request ====="
-                    cat "$REQUEST_PATH"
-                    echo "=========================="
-        
                     set +e
         
-                    docker run --rm \
+                    docker run --rm -t \
                         --network moviesapi-security-pipeline_default \
                         --volumes-from jenkins \
                         python:3.12-slim \
                         python "$SQLMAP_PATH" \
-                        -r "$REQUEST_PATH" \
+                        -u "http://moviesapi:8080/api/movies/search?title=King" \
+                        -p title \
+                        --dbms=SQLite \
                         --level=5 \
                         --risk=3 \
                         --technique=BEUSTQ \
                         --union-cols=1-20 \
                         --flush-session \
-                        --drop-set-cookie \
                         --batch \
-                        -v 3 \
                         > sqlmap-report.txt 2>&1
         
                     SQLMAP_EXIT=$?
