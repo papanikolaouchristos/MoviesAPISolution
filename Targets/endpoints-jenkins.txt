@@ -8,4 +8,4 @@ http://moviesapi:8080/api/movies/1
 
 http://moviesapi:8080/api/users/1
 
-http://moviesapi:8080/api/movies/search?title=Batman
+http://moviesapi:8080/api/movies/search?title=King
