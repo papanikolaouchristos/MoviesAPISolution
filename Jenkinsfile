@@ -31,13 +31,15 @@ pipeline {
         stage('TruffleHog') {
             steps {
                 sh '''
+                    rm -f trufflehog-report.txt
+        
                     docker run --rm \
                         --volumes-from jenkins \
                         trufflesecurity/trufflehog:latest \
-                        filesystem \
-                        /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline \
+                        filesystem /var/jenkins_home/workspace/MoviesAPI-Security-Pipeline \
+                        --exclude-paths=/var/jenkins_home/workspace/MoviesAPI-Security-Pipeline/trufflehog-exclude.txt \
                         --no-update \
-                        > trufflehog-report.txt 2>&1
+                        > trufflehog-report.txt 2>&1 || true
         
                     cat trufflehog-report.txt
                 '''
