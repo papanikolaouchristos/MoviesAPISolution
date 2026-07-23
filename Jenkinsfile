@@ -113,6 +113,8 @@ pipeline {
 				  --dbms=SQLite \
                   --level=5 \
                   --risk=3 \
+				  --technique=BEUSTQ \
+                  --union-cols=1-20 \
                   --flush-session \
                   --batch > sqlmap-report.txt 2>&1
         
