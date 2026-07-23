@@ -113,13 +113,13 @@ pipeline {
         
                     test -f "$SQLMAP_PATH"
         
-                    cat > "$REQUEST_PATH" <<'EOF'
-        GET /api/movies/search?title=King* HTTP/1.1
-        Host: moviesapi:8080
-        Accept: application/json
-        Connection: close
-        
-        EOF
+                    printf '%s\\r\\n' \
+                        'GET /api/movies/search?title=King* HTTP/1.1' \
+                        'Host: moviesapi:8080' \
+                        'Accept: application/json' \
+                        'Connection: close' \
+                        '' \
+                        > "$REQUEST_PATH"
         
                     echo "===== SQLMap request ====="
                     cat "$REQUEST_PATH"
