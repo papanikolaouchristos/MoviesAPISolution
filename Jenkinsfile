@@ -106,15 +106,10 @@ pipeline {
             steps {
                 sh '''
                     rm -rf sqlmap-src
-        
-                    git clone --depth 1 \
-                        https://github.com/sqlmapproject/sqlmap.git \
-                        sqlmap-src
+                    git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git sqlmap-src
         
                     SQLMAP_PATH="$WORKSPACE/sqlmap-src/sqlmap.py"
         
-                    echo "SQLMap path: $SQLMAP_PATH"
-                    ls -la "$WORKSPACE/sqlmap-src"
                     test -f "$SQLMAP_PATH"
         
                     set +e
@@ -130,8 +125,9 @@ pipeline {
                         --level=5 \
                         --risk=3 \
                         --technique=BEUSTQ \
+                        --prefix="'" \
+                        --suffix="-- " \
                         --union-cols=1-20 \
-                        --string="King Kong" \
                         --flush-session \
                         --batch \
                         > sqlmap-report.txt 2>&1
