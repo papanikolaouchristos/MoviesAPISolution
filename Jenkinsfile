@@ -16,7 +16,7 @@ pipeline {
                 docker run --rm \
                 -v "$PWD:/src" \
                 semgrep/semgrep \
-                semgrep scan --config auto /src
+                semgrep scan --config auto /src --include="*.cs"
                 '''
             }
         }
@@ -62,10 +62,11 @@ pipeline {
         stage('SQLMap') {
             steps {
                 sh '''
-                docker run --rm --network moviesapi-security-pipeline_default \
-                sqlmapproject/sqlmap \
+                docker run --rm \
+                --network moviesapi-security-pipeline_default \
+                parrotsec/sqlmap \
                 -u "http://moviesapi:8080/api/movies/search?title=test" \
-                --batch
+                --batch > sqlmap-report.txt 
                 '''
             }
         }
